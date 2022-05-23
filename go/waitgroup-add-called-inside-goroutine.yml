@@ -1,33 +1,18 @@
 rules:
 - id: waitgroup-add-called-inside-goroutine
   patterns:
-    - pattern-either: 
-      - pattern: |
-          $WG := &sync.WaitGroup{}
-          ...
-          go func(...) {
+    - pattern-either:
+        - pattern-inside: |
+            $WG := &sync.WaitGroup{}
             ...
-            $WG.Add(...)
+            $WG.Wait()
+        - pattern-inside: |
+            var $WG sync.WaitGroup
             ...
-          }(...)
-          ...
-          $WG.Wait()
-      - pattern: |
-          var $WG sync.WaitGroup
-          ...
-          go func(...) {
-            ...
-            $WG.Add(...)
-            ...
-          }(...)
-          ...
-          $WG.Wait()
-    - pattern-not-inside: |
-        for ... {
-          ...
-          $WG.Add(...)
-          ...
-        }
+            $WG.Wait()
+    - pattern-inside: |
+        go func(...) { ... } (...)
+    - pattern: $WG.Add(...)
   message: |
     Calling `$WG.Add` inside of an anonymous goroutine may result in `$WG.Wait`
     waiting for more or less calls to `$WG.Done()` than expected.
